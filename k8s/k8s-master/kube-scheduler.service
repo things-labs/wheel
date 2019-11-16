@@ -1,0 +1,16 @@
+[Unit]
+Description=Kubernetes Scheduler
+After=kube-apiserver.service 
+Requires=kube-apiserver.service
+
+[Service]
+User=root
+EnvironmentFile=-/etc/kubernetes/scheduler.conf
+ExecStart=/usr/bin/kube-scheduler \
+        $KUBE_MASTER \
+        $KUBE_SCHEDULER_ARGS
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
