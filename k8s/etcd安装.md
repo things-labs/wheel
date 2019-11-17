@@ -128,4 +128,5 @@ systemctl start etcd.service
 ```shell
 etcdctl cluster-health  # v3.3.x
 etcdctl endpoint health # v3.4.x
+etcdctl --endpoints=[192.168.1.12:2379] endpoint health # 外机
 ```

@@ -5,6 +5,8 @@
   - 虚拟机vmware
 - 软件
   - docker-machine
+  - etcd
+  - kubernetes
 
 ## 给节点安装docker
 
@@ -85,8 +87,8 @@ WantedBy=multi-user.target
 ```conf
 KUBE_API_ADDRESS="--insecure-bind-address=0.0.0.0"
 KUBE_API_PORT="--insecure-port=8080"
-KUBE_ETCD_SERVERS="--etcd-servers=http://127.0.0.1:2379"
-KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=172.17.0.0/16"
+KUBE_ETCD_SERVERS="--etcd-servers=http://192.168.1.12:2379"
+KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=172.18.0.0/16"
 KUBE_ADMISSION_CONTROL="--admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota"
 KUBE_API_LOG="--logtostderr=false --log-dir=/var/log/kubernets/apiserver --v=2"
 KUBE_API_ARGS=" "
@@ -119,7 +121,7 @@ WantedBy=multi-user.target
 在`/etc/kubernetes/`目录下创建文件`controller-manager`,内容为
 
 ```conf
-KUBE_MASTER="--master=http://127.0.0.1:8080"
+KUBE_MASTER="--master=http://192.168.1.12:8080"
 KUBE_CONTROLLER_MANAGER_ARGS=" "
 ```
 
@@ -151,7 +153,7 @@ WantedBy=multi-user.target
 在`/etc/kubernetes/`目录下创建文件`scheduler`,内容为
 
 ```conf
-KUBE_MASTER="--master=http://127.0.0.1:8080"
+KUBE_MASTER="--master=http://192.168.1.12:8080"
 KUBE_SCHEDULER_ARGS="--logtostderr=true --log-dir=/var/log/kubernetes/scheduler --v=2"
 ```
 
