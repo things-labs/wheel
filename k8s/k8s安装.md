@@ -171,6 +171,7 @@ systemctl start kube-scheduler.service
 
 ```shell
 kubectl get cs
+systemctl status kube-apiserver kube-controller-manager kube-scheduler
 ```
 
 ### 4 Node安装
