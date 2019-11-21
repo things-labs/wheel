@@ -9,7 +9,8 @@ import (
 	"github.com/gin-gonic/gin/render"
 )
 
-// bodyAllowedForStatus is a copy of http.bodyAllowedForStatus non-exported function.
+// bodyAllowedForStatus is a copy of http.body
+// AllowedForStatus non-exported function.
 func bodyAllowedForStatus(status int) bool {
 	switch {
 	case status >= 100 && status <= 199:
@@ -44,13 +45,13 @@ func SecureJSON(w http.ResponseWriter, code int, obj interface{}) {
 	Render(w, code, render.SecureJSON{Prefix: "" /*TODO*/, Data: obj})
 }
 
-func JSONP(w http.ResponseWriter, code int, obj interface{}) {
-	//callback := c.DefaultQuery("callback", "")
-	//if callback == "" {
-	//	Render(w, code, render.JSON{Data: obj})
-	//	return
-	//}
-	//Render(w, code, render.JsonpJSON{Callback: callback, Data: obj})
+func JSONP(w http.ResponseWriter, r *http.Request, code int, obj interface{}) {
+	callback := DefaultQuery(r, "callback", "")
+	if callback == "" {
+		Render(w, code, render.JSON{Data: obj})
+		return
+	}
+	Render(w, code, render.JsonpJSON{Callback: callback, Data: obj})
 }
 
 func JSON(w http.ResponseWriter, code int, obj interface{}) {
