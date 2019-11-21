@@ -1,4 +1,4 @@
-module github.com/thinkgos/httputil
+module github.com/thinkgos/xin
 
 go 1.13
 

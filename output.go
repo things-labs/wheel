@@ -1,6 +1,6 @@
 // Package httutil is useful net/http
 // almost copy from github.com/gin-gonic/gin for net/http used
-package httputil
+package xin
 
 import (
 	"io"
