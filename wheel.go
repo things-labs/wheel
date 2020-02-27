@@ -65,6 +65,7 @@ type Wheel struct {
 	hasGoroutine uint32
 }
 
+// Timer which hold the timer instance
 type Timer *list.Element
 
 // New new a wheel
@@ -160,7 +161,7 @@ func (sf *Wheel) MountJobOnTimer(tm Timer, job Job) Timer {
 	return tm
 }
 
-// MountJobOnTimer mount a job function on timer
+// MountJobFuncOnTimer mount a job function on timer
 func (sf *Wheel) MountJobFuncOnTimer(tm Timer, f JobFunc) Timer {
 	return sf.MountJobOnTimer(tm, f)
 }
