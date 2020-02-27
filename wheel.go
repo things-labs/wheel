@@ -67,8 +67,8 @@ type Wheel struct {
 
 type Timer *list.Element
 
-// NewWheel new a wheel
-func NewWheel(opts ...Option) *Wheel {
+// New new a wheel
+func New(opts ...Option) *Wheel {
 	wl := &Wheel{
 		spokes:      make([]*list.List, tvRSize+tvNSize*tvNNum),
 		doNow:       list.New(),
