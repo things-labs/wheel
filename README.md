@@ -1,6 +1,5 @@
 # wheel timer
-[![GoDoc](https://godoc.org/github.com/thinkgos/wheel?status.svg)](https://godoc.org/github.com
-/thinkgos/wheel)
+[![GoDoc](https://godoc.org/github.com/thinkgos/wheel?status.svg)](https://godoc.org/github.com/thinkgos/wheel)
 [![Build Status](https://travis-ci.org/thinkgos/wheel.svg?branch=master)](https://travis-ci.org/thinkgos/wheel)
 [![codecov](https://codecov.io/gh/thinkgos/wheel/branch/master/graph/badge.svg)](https://codecov.io/gh/thinkgos/wheel)
 ![Action Status](https://github.com/thinkgos/wheel/workflows/Go/badge.svg)
