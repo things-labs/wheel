@@ -38,7 +38,7 @@ type Entry struct {
 	next time.Time
 	// 任务已经执行的次数
 	count uint32
-	//任务需要执行的次数
+	// 任务需要执行的次数
 	number uint32
 	// 时间间隔
 	interval time.Duration
@@ -215,17 +215,15 @@ func (sf *Wheel) AddPersistJobFunc(f JobFunc, interval ...time.Duration) Timer {
 	return sf.AddJob(f, Persist, interval...)
 }
 
-func (sf *Wheel) start(e *list.Element, newTimeout ...time.Duration) {
+func (sf *Wheel) start(e *list.Element, newTimeout ...time.Duration) *Wheel {
 	e.RemoveSelf() // should remove from old list
 	entry := entry(e)
 	entry.count = 0
-	if len(newTimeout) > 0 {
-		entry.next = time.Now().Add(newTimeout[0])
-	} else {
-		entry.next = time.Now().Add(entry.interval)
-	}
+	entry.next = time.Now().Add(append(newTimeout, entry.interval)[0])
 
 	sf.addTimer(e)
+
+	return sf
 }
 
 // Start 启动或重始启动e的计时

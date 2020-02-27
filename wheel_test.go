@@ -17,7 +17,11 @@ func (sf testJob) Run() {
 }
 
 func TestDefaultTiming(t *testing.T) {
-	wl := NewWheel()
+	wl := NewWheel(WithGranularity(DefaultGranularity),
+		WithInterval(DefaultInterval),
+		WithGoroutine(true)).Run()
+	wl.UseGoroutine(false)
+	defer wl.Close()
 	if got := wl.Len(); got != 0 {
 		t.Errorf("Len() = %v, want %v", got, 0)
 	}
@@ -34,8 +38,8 @@ func TestDefaultTiming(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-func ExampleAddJob() {
-	wl := NewWheel()
+func ExampleWheel_Run() {
+	wl := NewWheel().Run()
 
 	wl.AddOneShotJobFunc(func() {
 		fmt.Println("1")
