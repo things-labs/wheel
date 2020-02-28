@@ -18,7 +18,6 @@ func (sf testJob) Run() {
 
 func TestDefaultTiming(t *testing.T) {
 	wl := New(WithGranularity(DefaultGranularity),
-		WithInterval(DefaultInterval),
 		WithGoroutine(true)).Run()
 	wl.UseGoroutine(false)
 	defer wl.Close()
@@ -30,7 +29,7 @@ func TestDefaultTiming(t *testing.T) {
 	}
 
 	wl.AddPersistJobFunc(func() {}, time.Millisecond*100)
-	wl.AddPersistJob(&emptyJob{})
+	wl.AddPersistJob(&emptyJob{}, time.Second)
 	e := wl.NewJobFunc(func() {}, 2, time.Millisecond*100)
 	wl.Start(e)
 	wl.Delete(e)

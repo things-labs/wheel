@@ -16,8 +16,6 @@ const (
 )
 
 const (
-	// DefaultInterval 默认间隔
-	DefaultInterval = time.Second
 	// DefaultGranularity 默认时基精度,意思是每xx时间一个tick
 	DefaultGranularity = time.Millisecond * 1
 )
@@ -58,7 +56,6 @@ type Wheel struct {
 	curTick      uint32
 	startTime    time.Time
 	granularity  time.Duration
-	interval     time.Duration
 	rw           sync.RWMutex
 	stop         chan struct{}
 	running      uint32
@@ -75,7 +72,6 @@ func New(opts ...Option) *Wheel {
 		doNow:       list.New(),
 		startTime:   time.Now(),
 		granularity: DefaultGranularity,
-		interval:    DefaultInterval,
 		stop:        make(chan struct{}),
 	}
 
@@ -140,16 +136,11 @@ func (sf *Wheel) nextTick(next time.Time) uint32 {
 }
 
 // NewTimer new a timer which mount a empty job, 条目未启动
-func (sf *Wheel) NewTimer(num uint32, interval ...time.Duration) Timer {
-	val := sf.interval
-	if len(interval) > 0 {
-		val = interval[0]
-	}
-
+func (sf *Wheel) NewTimer(num uint32, interval time.Duration) Timer {
 	return &list.Element{
 		Value: &Entry{
 			number:   num,
-			interval: val,
+			interval: interval,
 			job:      JobFunc(func() {}),
 		},
 	}
@@ -167,18 +158,18 @@ func (sf *Wheel) MountJobFuncOnTimer(tm Timer, f JobFunc) Timer {
 }
 
 // NewJob 新建一个条目,条目未启动定时
-func (sf *Wheel) NewJob(job Job, num uint32, interval ...time.Duration) Timer {
-	return sf.MountJobOnTimer(sf.NewTimer(num, interval...), job)
+func (sf *Wheel) NewJob(job Job, num uint32, interval time.Duration) Timer {
+	return sf.MountJobOnTimer(sf.NewTimer(num, interval), job)
 }
 
 // NewJobFunc 新建一个条目,条目未启动定时
-func (sf *Wheel) NewJobFunc(f JobFunc, num uint32, interval ...time.Duration) Timer {
-	return sf.MountJobFuncOnTimer(sf.NewTimer(num, interval...), f)
+func (sf *Wheel) NewJobFunc(f JobFunc, num uint32, interval time.Duration) Timer {
+	return sf.MountJobFuncOnTimer(sf.NewTimer(num, interval), f)
 }
 
 // AddJob 添加任务
-func (sf *Wheel) AddJob(job Job, num uint32, interval ...time.Duration) Timer {
-	e := sf.NewJob(job, num, interval...)
+func (sf *Wheel) AddJob(job Job, num uint32, interval time.Duration) Timer {
+	e := sf.NewJob(job, num, interval)
 	entry := entry(e)
 	entry.next = time.Now().Add(entry.interval)
 
@@ -192,28 +183,28 @@ func (sf *Wheel) AddJob(job Job, num uint32, interval ...time.Duration) Timer {
 }
 
 // AddOneShotJob 添加一次性任务
-func (sf *Wheel) AddOneShotJob(job Job, interval ...time.Duration) Timer {
-	return sf.AddJob(job, OneShot, interval...)
+func (sf *Wheel) AddOneShotJob(job Job, interval time.Duration) Timer {
+	return sf.AddJob(job, OneShot, interval)
 }
 
 // AddPersistJob 添加周期性任务
-func (sf *Wheel) AddPersistJob(job Job, interval ...time.Duration) Timer {
-	return sf.AddJob(job, Persist, interval...)
+func (sf *Wheel) AddPersistJob(job Job, interval time.Duration) Timer {
+	return sf.AddJob(job, Persist, interval)
 }
 
 // AddJobFunc 添加任务函数
-func (sf *Wheel) AddJobFunc(f JobFunc, num uint32, interval ...time.Duration) Timer {
-	return sf.AddJob(f, num, interval...)
+func (sf *Wheel) AddJobFunc(f JobFunc, num uint32, interval time.Duration) Timer {
+	return sf.AddJob(f, num, interval)
 }
 
 // AddOneShotJobFunc 添加一次性任务函数
-func (sf *Wheel) AddOneShotJobFunc(f JobFunc, interval ...time.Duration) Timer {
-	return sf.AddJob(f, OneShot, interval...)
+func (sf *Wheel) AddOneShotJobFunc(f JobFunc, interval time.Duration) Timer {
+	return sf.AddJob(f, OneShot, interval)
 }
 
 // AddPersistJobFunc 添加周期性函数
-func (sf *Wheel) AddPersistJobFunc(f JobFunc, interval ...time.Duration) Timer {
-	return sf.AddJob(f, Persist, interval...)
+func (sf *Wheel) AddPersistJobFunc(f JobFunc, interval time.Duration) Timer {
+	return sf.AddJob(f, Persist, interval)
 }
 
 func (sf *Wheel) start(e *list.Element, newTimeout ...time.Duration) *Wheel {

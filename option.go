@@ -14,13 +14,6 @@ func WithGranularity(gra time.Duration) Option {
 	}
 }
 
-// WithInterval override interval 默认条目时间间隔
-func WithInterval(interval time.Duration) Option {
-	return func(w *Wheel) {
-		w.interval = interval
-	}
-}
-
 // WithGoroutine override hasGoroutine 回调使用goroutine执行
 func WithGoroutine(use bool) Option {
 	return func(w *Wheel) {
