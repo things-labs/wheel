@@ -89,11 +89,11 @@ func New(opts ...Option) *Wheel {
 
 // UseGoroutine use goroutine or callback
 func (sf *Wheel) UseGoroutine(use bool) {
+	var val uint32
 	if use {
-		atomic.StoreUint32(&sf.hasGoroutine, 1)
-	} else {
-		atomic.StoreUint32(&sf.hasGoroutine, 0)
+		val = 1
 	}
+	atomic.StoreUint32(&sf.hasGoroutine, val)
 }
 
 // Run 运行,不阻塞
