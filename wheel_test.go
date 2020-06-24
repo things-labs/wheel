@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-type emptyJob struct{}
-
-func (emptyJob) Run() {}
-
 type testJob struct{}
 
 func (sf testJob) Run() {
@@ -28,10 +24,8 @@ func TestDefaultTiming(t *testing.T) {
 		t.Errorf("HasRunning() = %v, want %v", got, true)
 	}
 
-	wl.AddPersistJobFunc(func() {}, time.Millisecond*100)
-	wl.AddPersistJob(&emptyJob{}, time.Second)
-	e := wl.NewJobFunc(func() {}, 2, time.Millisecond*100)
-	wl.Start(e)
+	e := NewJobFunc(func() {}, time.Millisecond*100)
+	wl.Add(e)
 	wl.Delete(e)
 	wl.Modify(e, time.Millisecond*200)
 	time.Sleep(time.Second)
@@ -40,20 +34,17 @@ func TestDefaultTiming(t *testing.T) {
 func ExampleWheel_Run() {
 	wl := New().Run()
 
-	wl.AddOneShotJobFunc(func() {
+	wl.AddJobFunc(func() {
 		fmt.Println("1")
 	}, time.Millisecond*100)
 	wl.AddJobFunc(func() {
 		fmt.Println("2")
-	}, OneShot, time.Millisecond*200)
-	wl.AddOneShotJob(&testJob{}, time.Millisecond*300)
-	wl.AddJob(&testJob{}, 2, time.Millisecond*400)
+	}, time.Millisecond*200)
+	wl.AddJob(&testJob{}, time.Millisecond*300)
 	wl.UseGoroutine(true)
 	time.Sleep(time.Second * 2)
 	// Output:
 	// 1
 	// 2
-	// job
-	// job
 	// job
 }

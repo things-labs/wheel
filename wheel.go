@@ -9,12 +9,6 @@ import (
 	"github.com/thinkgos/list"
 )
 
-// num 定义
-const (
-	OneShot = 1
-	Persist = 0
-)
-
 const (
 	// DefaultGranularity 默认时基精度,意思是每xx时间一个tick
 	DefaultGranularity = time.Millisecond * 1
@@ -34,32 +28,28 @@ const (
 type Entry struct {
 	// next 下一次运行时间  0: 表示未运行,或未启动
 	next time.Time
-	// 任务已经执行的次数
-	count uint32
-	// 任务需要执行的次数
-	number uint32
-	// 时间间隔
-	interval time.Duration
+	// timeout 超时时间
+	timeout time.Duration
 	// 任务
 	job Job
 }
 
 // 内部使用,条目
-func entry(e *list.Element) *Entry {
+func listEntry(e *list.Element) *Entry {
 	return e.Value.(*Entry)
 }
 
 // Wheel 时间轮实现
 type Wheel struct {
 	spokes       []*list.List // 轮的槽
-	doNow        *list.List
+	doRunning    *list.List
 	curTick      uint32
 	startTime    time.Time
 	granularity  time.Duration
 	rw           sync.RWMutex
 	stop         chan struct{}
 	running      uint32
-	hasGoroutine uint32
+	useGoroutine uint32
 }
 
 // Timer which hold the timer instance
@@ -69,7 +59,7 @@ type Timer *list.Element
 func New(opts ...Option) *Wheel {
 	wl := &Wheel{
 		spokes:      make([]*list.List, tvRSize+tvNSize*tvNNum),
-		doNow:       list.New(),
+		doRunning:   list.New(),
 		startTime:   time.Now(),
 		granularity: DefaultGranularity,
 		stop:        make(chan struct{}),
@@ -93,7 +83,7 @@ func (sf *Wheel) UseGoroutine(use bool) {
 	if use {
 		val = 1
 	}
-	atomic.StoreUint32(&sf.hasGoroutine, val)
+	atomic.StoreUint32(&sf.useGoroutine, val)
 }
 
 // Run 运行,不阻塞
@@ -126,7 +116,7 @@ func (sf *Wheel) Len() int {
 	for i := 0; i < len(sf.spokes); i++ {
 		length += sf.spokes[i].Len()
 	}
-	length += sf.doNow.Len()
+	length += sf.doRunning.Len()
 	sf.rw.RUnlock()
 	return length
 }
@@ -135,91 +125,70 @@ func (sf *Wheel) nextTick(next time.Time) uint32 {
 	return uint32((next.Sub(sf.startTime) + sf.granularity - 1) / sf.granularity)
 }
 
-// NewTimer new a timer which mount a empty job, 条目未启动
-func (sf *Wheel) NewTimer(num uint32, interval time.Duration) Timer {
+// NewTimer new a timer with a empty job,
+func NewTimer(timeout time.Duration) Timer {
 	return &list.Element{
 		Value: &Entry{
-			number:   num,
-			interval: interval,
-			job:      JobFunc(func() {}),
+			timeout: timeout,
+			job:     emptyJob{},
 		},
 	}
 }
 
 // MountJobOnTimer mount a job on timer
-func (sf *Wheel) MountJobOnTimer(tm Timer, job Job) Timer {
-	entry(tm).job = job
-	return tm
+func SetTimerJob(tm Timer, job Job) {
+	listEntry(tm).job = job
 }
 
 // MountJobFuncOnTimer mount a job function on timer
-func (sf *Wheel) MountJobFuncOnTimer(tm Timer, f JobFunc) Timer {
-	return sf.MountJobOnTimer(tm, f)
+func SetTimerJobFunc(tm Timer, f JobFunc) {
+	SetTimerJob(tm, f)
 }
 
 // NewJob 新建一个条目,条目未启动定时
-func (sf *Wheel) NewJob(job Job, num uint32, interval time.Duration) Timer {
-	return sf.MountJobOnTimer(sf.NewTimer(num, interval), job)
+func NewJob(job Job, timeout time.Duration) Timer {
+	t := NewTimer(timeout)
+	SetTimerJob(t, job)
+	return t
 }
 
 // NewJobFunc 新建一个条目,条目未启动定时
-func (sf *Wheel) NewJobFunc(f JobFunc, num uint32, interval time.Duration) Timer {
-	return sf.MountJobFuncOnTimer(sf.NewTimer(num, interval), f)
+func NewJobFunc(f JobFunc, interval time.Duration) Timer {
+	return NewJob(f, interval)
 }
 
 // AddJob 添加任务
-func (sf *Wheel) AddJob(job Job, num uint32, interval time.Duration) Timer {
-	e := sf.NewJob(job, num, interval)
-	entry := entry(e)
-	entry.next = time.Now().Add(entry.interval)
+func (sf *Wheel) AddJob(job Job, timeout time.Duration) Timer {
+	e := NewJob(job, timeout)
+	entry := listEntry(e)
+	entry.next = time.Now().Add(entry.timeout)
 
 	sf.rw.Lock()
 	defer sf.rw.Unlock()
 
 	if sf.nextTick(entry.next) == sf.curTick {
-		return sf.doNow.PushElementBack(e)
+		return sf.doRunning.PushElementBack(e)
 	}
 	return sf.addTimer(e)
 }
 
-// AddOneShotJob 添加一次性任务
-func (sf *Wheel) AddOneShotJob(job Job, interval time.Duration) Timer {
-	return sf.AddJob(job, OneShot, interval)
-}
-
-// AddPersistJob 添加周期性任务
-func (sf *Wheel) AddPersistJob(job Job, interval time.Duration) Timer {
-	return sf.AddJob(job, Persist, interval)
-}
-
 // AddJobFunc 添加任务函数
-func (sf *Wheel) AddJobFunc(f JobFunc, num uint32, interval time.Duration) Timer {
-	return sf.AddJob(f, num, interval)
-}
-
-// AddOneShotJobFunc 添加一次性任务函数
-func (sf *Wheel) AddOneShotJobFunc(f JobFunc, interval time.Duration) Timer {
-	return sf.AddJob(f, OneShot, interval)
-}
-
-// AddPersistJobFunc 添加周期性函数
-func (sf *Wheel) AddPersistJobFunc(f JobFunc, interval time.Duration) Timer {
-	return sf.AddJob(f, Persist, interval)
+func (sf *Wheel) AddJobFunc(f JobFunc, interval time.Duration) Timer {
+	return sf.AddJob(f, interval)
 }
 
 func (sf *Wheel) start(e *list.Element, newTimeout ...time.Duration) *Wheel {
 	e.RemoveSelf() // should remove from old list
-	entry := entry(e)
-	entry.count = 0
-	entry.next = time.Now().Add(append(newTimeout, entry.interval)[0])
+	entry := listEntry(e)
+	entry.next = time.Now().Add(append(newTimeout, entry.timeout)[0])
 
 	sf.addTimer(e)
 
 	return sf
 }
 
-// Start 启动或重始启动e的计时
-func (sf *Wheel) Start(tm Timer, newTimeout ...time.Duration) *Wheel {
+// Add 启动或重始启动e的计时
+func (sf *Wheel) Add(tm Timer, newTimeout ...time.Duration) *Wheel {
 	if tm == nil {
 		return sf
 	}
@@ -245,13 +214,13 @@ func (sf *Wheel) Delete(tm Timer) *Wheel {
 }
 
 // Modify 修改条目的周期时间,重置计数且重新启动定时器
-func (sf *Wheel) Modify(tm Timer, interval time.Duration) *Wheel {
+func (sf *Wheel) Modify(tm Timer, timeout time.Duration) *Wheel {
 	if tm == nil {
 		return sf
 	}
 
 	sf.rw.Lock()
-	entry(tm).interval = interval
+	listEntry(tm).timeout = timeout
 	sf.start(tm)
 	sf.rw.Unlock()
 
@@ -272,20 +241,15 @@ func (sf *Wheel) runWork() {
 				if index == 0 {
 					sf.cascade()
 				}
-				sf.doNow.SpliceBackList(sf.spokes[index])
+				sf.doRunning.SpliceBackList(sf.spokes[index])
 			}
 
-			for sf.doNow.Len() > 0 {
-				e := sf.doNow.PopFront()
-				entry := entry(e)
+			for sf.doRunning.Len() > 0 {
+				e := sf.doRunning.PopFront()
+				entry := listEntry(e)
 
-				entry.count++
-				if entry.number == 0 || entry.count < entry.number {
-					entry.next = now.Add(entry.interval)
-					sf.addTimer(e)
-				}
 				sf.rw.Unlock()
-				if atomic.LoadUint32(&sf.hasGoroutine) == 1 {
+				if atomic.LoadUint32(&sf.useGoroutine) == 1 {
 					go entry.job.Run()
 				} else {
 					wrapJob(entry.job)
@@ -318,7 +282,7 @@ func (sf *Wheel) cascade() {
 func (sf *Wheel) addTimer(tm Timer) *list.Element {
 	var spokeIdx int
 
-	next := sf.nextTick(entry(tm).next)
+	next := sf.nextTick(listEntry(tm).next)
 	if idx := next - sf.curTick; idx < tvRSize {
 		spokeIdx = int(next & tvRMask)
 	} else {
