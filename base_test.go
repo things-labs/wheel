@@ -13,8 +13,7 @@ func (sf testJob) Run() {
 }
 
 func TestDefaultTiming(t *testing.T) {
-	wl := New(WithGranularity(DefaultGranularity),
-		WithGoroutine(false)).Run()
+	wl := New(WithGranularity(DefaultGranularity)).Run()
 
 	defer wl.Close()
 	if got := wl.Len(); got != 0 {
@@ -29,6 +28,11 @@ func TestDefaultTiming(t *testing.T) {
 	wl.Delete(e)
 	wl.Modify(e, time.Millisecond*200)
 	time.Sleep(time.Second)
+
+	// improve couver
+	wl.Modify(nil, time.Second)
+	wl.Delete(nil)
+	wl.Add(nil)
 }
 
 func ExampleWheel_Run() {

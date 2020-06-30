@@ -25,40 +25,31 @@ const (
 	tvNMask = tvNSize - 1  // 层级掩码
 )
 
-// Entry 条目
-type Entry struct {
-	// next 下一次运行时间  0: 表示未运行,或未启动
-	next time.Time
-	// timeout 超时时间
-	timeout time.Duration
-	// 任务
-	job Job
+// Base 时间轮实现
+type Base struct {
+	spokes      []list.List // 轮的槽
+	doRunning   *list.List
+	curTick     uint32
+	startTime   time.Time
+	granularity time.Duration
+	rw          sync.RWMutex
+	stop        chan struct{}
+	running     uint32
 }
 
-// 内部使用,条目
-func listEntry(e *list.Element) *Entry {
-	return e.Value.(*Entry)
-}
+// Option 选项
+type Option func(w *Base)
 
-// Wheel 时间轮实现
-type Wheel struct {
-	spokes       []list.List // 轮的槽
-	doRunning    *list.List
-	curTick      uint32
-	startTime    time.Time
-	granularity  time.Duration
-	rw           sync.RWMutex
-	stop         chan struct{}
-	running      uint32
-	useGoroutine uint32
+// WithGranularity override timeout 时间粒子
+func WithGranularity(gra time.Duration) Option {
+	return func(w *Base) {
+		w.granularity = gra
+	}
 }
-
-// Timer which hold the timer instance
-type Timer *list.Element
 
 // New new a wheel
-func New(opts ...Option) *Wheel {
-	wl := &Wheel{
+func New(opts ...Option) *Base {
+	wl := &Base{
 		spokes:      make([]list.List, tvRSize+tvNSize*tvNNum),
 		doRunning:   list.New(),
 		startTime:   time.Now(),
@@ -69,7 +60,6 @@ func New(opts ...Option) *Wheel {
 	for i := 0; i < len(wl.spokes); i++ {
 		wl.spokes[i].Init()
 	}
-
 	for _, opt := range opts {
 		opt(wl)
 	}
@@ -77,7 +67,7 @@ func New(opts ...Option) *Wheel {
 }
 
 // Run 运行,不阻塞
-func (sf *Wheel) Run() *Wheel {
+func (sf *Base) Run() *Base {
 	if atomic.CompareAndSwapUint32(&sf.running, 0, 1) {
 		go sf.runWork()
 	}
@@ -85,12 +75,12 @@ func (sf *Wheel) Run() *Wheel {
 }
 
 // HasRunning 运行状态
-func (sf *Wheel) HasRunning() bool {
+func (sf *Base) HasRunning() bool {
 	return atomic.LoadUint32(&sf.running) == 1
 }
 
 // Close close wait util close
-func (sf *Wheel) Close() error {
+func (sf *Base) Close() error {
 	if atomic.CompareAndSwapUint32(&sf.running, 1, 0) {
 		sf.stop <- struct{}{}
 	}
@@ -98,7 +88,7 @@ func (sf *Wheel) Close() error {
 }
 
 // Len 条目个数
-func (sf *Wheel) Len() int {
+func (sf *Base) Len() int {
 	var length int
 
 	sf.rw.RLock()
@@ -111,87 +101,51 @@ func (sf *Wheel) Len() int {
 	return length
 }
 
-func (sf *Wheel) nextTick(next time.Time) uint32 {
-	return uint32((next.Sub(sf.startTime) + sf.granularity - 1) / sf.granularity)
-}
-
-// NewTimer new a timer with a empty job,
-func NewTimer(timeout time.Duration) Timer {
-	return &list.Element{
-		Value: &Entry{
-			timeout: timeout,
-			job:     emptyJob{},
-		},
-	}
-}
-
-// MountJobOnTimer mount a job on timer
-func SetTimerJob(tm Timer, job Job) {
-	listEntry(tm).job = job
-}
-
-// MountJobFuncOnTimer mount a job function on timer
-func SetTimerJobFunc(tm Timer, f JobFunc) {
-	SetTimerJob(tm, f)
-}
-
 // NewJob 新建一个条目,条目未启动定时
-func NewJob(job Job, timeout time.Duration) Timer {
-	t := NewTimer(timeout)
-	SetTimerJob(t, job)
-	return t
+func NewJob(job Job, timeout time.Duration) *Timer {
+	return NewTimer(timeout).WithJob(job)
 }
 
 // NewJobFunc 新建一个条目,条目未启动定时
-func NewJobFunc(f JobFunc, interval time.Duration) Timer {
-	return NewJob(f, interval)
+func NewJobFunc(f func(), timeout time.Duration) *Timer {
+	return NewTimer(timeout).WithJob(JobFunc(f))
 }
 
 // AddJob 添加任务
-func (sf *Wheel) AddJob(job Job, timeout time.Duration) Timer {
-	e := NewJob(job, timeout)
-	entry := listEntry(e)
-	entry.next = time.Now().Add(entry.timeout)
+func (sf *Base) AddJob(job Job, timeout time.Duration) *Timer {
+	tm := NewJob(job, timeout)
+	e := tm.getEntry()
+	e.next = time.Now().Add(e.timeout)
 
 	sf.rw.Lock()
 	defer sf.rw.Unlock()
 
-	if sf.nextTick(entry.next) == sf.curTick {
-		return sf.doRunning.PushElementBack(e)
+	if sf.nextTick(e.next) == sf.curTick {
+		sf.doRunning.PushElementBack((*list.Element)(tm))
+		return tm
 	}
-	return sf.addTimer(e)
+	return sf.addTimer(tm)
 }
 
 // AddJobFunc 添加任务函数
-func (sf *Wheel) AddJobFunc(f JobFunc, interval time.Duration) Timer {
-	return sf.AddJob(f, interval)
-}
-
-func (sf *Wheel) start(e *list.Element, newTimeout ...time.Duration) *Wheel {
-	e.RemoveSelf() // should remove from old list
-	entry := listEntry(e)
-	entry.next = time.Now().Add(append(newTimeout, entry.timeout)[0])
-
-	sf.addTimer(e)
-
-	return sf
+func (sf *Base) AddJobFunc(f func(), interval time.Duration) *Timer {
+	return sf.AddJob(JobFunc(f), interval)
 }
 
 // Add 启动或重始启动e的计时
-func (sf *Wheel) Add(tm Timer, newTimeout ...time.Duration) *Wheel {
+func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) *Base {
 	if tm == nil {
 		return sf
 	}
 
 	sf.rw.Lock()
-	sf.start(tm, newTimeout...)
-	sf.rw.Unlock()
+	defer sf.rw.Unlock()
 
-	return sf
+	return sf.start(tm, newTimeout...)
 }
 
 // Delete 删除条目
-func (sf *Wheel) Delete(tm Timer) *Wheel {
+func (sf *Base) Delete(tm *Timer) *Base {
 	if tm == nil {
 		return sf
 	}
@@ -204,20 +158,19 @@ func (sf *Wheel) Delete(tm Timer) *Wheel {
 }
 
 // Modify 修改条目的周期时间,重置计数且重新启动定时器
-func (sf *Wheel) Modify(tm Timer, timeout time.Duration) *Wheel {
+func (sf *Base) Modify(tm *Timer, timeout time.Duration) *Base {
 	if tm == nil {
 		return sf
 	}
 
 	sf.rw.Lock()
-	listEntry(tm).timeout = timeout
-	sf.start(tm)
-	sf.rw.Unlock()
+	defer sf.rw.Unlock()
 
-	return sf
+	tm.getEntry().timeout = timeout
+	return sf.start(tm)
 }
 
-func (sf *Wheel) runWork() {
+func (sf *Base) runWork() {
 	tick := time.NewTimer(sf.granularity)
 	for {
 		select {
@@ -235,14 +188,14 @@ func (sf *Wheel) runWork() {
 			}
 
 			for sf.doRunning.Len() > 0 {
-				e := sf.doRunning.PopFront()
-				entry := listEntry(e)
+				tm := (*Timer)(sf.doRunning.PopFront())
+				e := tm.getEntry()
 
 				sf.rw.Unlock()
-				if atomic.LoadUint32(&sf.useGoroutine) == 1 {
-					go entry.job.Run()
+				if e.useGoroutine {
+					go e.job.Run()
 				} else {
-					wrapJob(entry.job)
+					wrapJob(e.job)
 				}
 				sf.rw.Lock()
 			}
@@ -256,12 +209,12 @@ func (sf *Wheel) runWork() {
 }
 
 // 层叠计算每一层
-func (sf *Wheel) cascade() {
+func (sf *Base) cascade() {
 	for level := 0; ; {
 		index := int((sf.curTick >> (uint32)(tvRBits+level*tvNBits)) & tvNMask)
 		spoke := sf.spokes[tvRSize+tvNSize*level+index]
 		for spoke.Len() > 0 {
-			sf.addTimer(spoke.PopFront())
+			sf.addTimer((*Timer)(spoke.PopFront()))
 		}
 		if level++; !(index == 0 && level < tvNNum) {
 			break
@@ -269,10 +222,14 @@ func (sf *Wheel) cascade() {
 	}
 }
 
-func (sf *Wheel) addTimer(tm Timer) *list.Element {
+func (sf *Base) nextTick(next time.Time) uint32 {
+	return uint32((next.Sub(sf.startTime) + sf.granularity - 1) / sf.granularity)
+}
+
+func (sf *Base) addTimer(tm *Timer) *Timer {
 	var spokeIdx int
 
-	next := sf.nextTick(listEntry(tm).next)
+	next := sf.nextTick(tm.getEntry().next)
 	if idx := next - sf.curTick; idx < tvRSize {
 		spokeIdx = int(next & tvRMask)
 	} else {
@@ -283,6 +240,20 @@ func (sf *Wheel) addTimer(tm Timer) *list.Element {
 		}
 		spokeIdx = tvRSize + tvNSize*level + int((next>>(uint32)(tvRBits+tvNBits*level))&tvNMask)
 	}
+	sf.spokes[spokeIdx].PushElementBack((*list.Element)(tm))
+	return tm
+}
 
-	return sf.spokes[spokeIdx].PushElementBack(tm)
+func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) *Base {
+	(*list.Element)(tm).RemoveSelf() // should remove from old list
+	e := tm.getEntry()
+
+	timeout := e.timeout
+	if len(newTimeout) > 0 {
+		timeout = newTimeout[0]
+	}
+	e.next = time.Now().Add(timeout)
+
+	sf.addTimer(tm)
+	return sf
 }
