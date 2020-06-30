@@ -8,8 +8,8 @@ import (
 
 // entry 条目
 type entry struct {
-	// next 下一次运行时间  0: 表示未运行,或未启动
-	next time.Time
+	// nextTime 下一次运行时间  0: 表示未运行,或未启动
+	nextTime time.Time
 	// timeout 超时时间
 	timeout time.Duration
 	// 任务
@@ -31,13 +31,18 @@ func NewTimer(timeout time.Duration) *Timer {
 	}
 }
 
-func (sf *Timer) WithGoroutine() *Timer {
-	sf.getEntry().useGoroutine = true
-	return sf
+// NewJob 新建一个条目,条目未启动定时
+func NewJob(job Job, timeout time.Duration) *Timer {
+	return NewTimer(timeout).WithJob(job)
 }
 
-func (sf *Timer) WithTimeout(timeout time.Duration) *Timer {
-	sf.getEntry().timeout = timeout
+// NewJobFunc 新建一个条目,条目未启动定时
+func NewJobFunc(f func(), timeout time.Duration) *Timer {
+	return NewTimer(timeout).WithJobFunc(f)
+}
+
+func (sf *Timer) WithGoroutine() *Timer {
+	sf.getEntry().useGoroutine = true
 	return sf
 }
 

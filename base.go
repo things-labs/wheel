@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// DefaultGranularity 默认时基精度,意思是每xx时间一个tick
+	// DefaultGranularity 默认时基精度1ms,意思是每xx时间一个tick
 	DefaultGranularity = time.Millisecond * 1
 )
 
@@ -101,30 +101,11 @@ func (sf *Base) Len() int {
 	return length
 }
 
-// NewJob 新建一个条目,条目未启动定时
-func NewJob(job Job, timeout time.Duration) *Timer {
-	return NewTimer(timeout).WithJob(job)
-}
-
-// NewJobFunc 新建一个条目,条目未启动定时
-func NewJobFunc(f func(), timeout time.Duration) *Timer {
-	return NewTimer(timeout).WithJob(JobFunc(f))
-}
-
 // AddJob 添加任务
 func (sf *Base) AddJob(job Job, timeout time.Duration) *Timer {
 	tm := NewJob(job, timeout)
-	e := tm.getEntry()
-	e.next = time.Now().Add(e.timeout)
-
-	sf.rw.Lock()
-	defer sf.rw.Unlock()
-
-	if sf.nextTick(e.next) == sf.curTick {
-		sf.doRunning.PushElementBack((*list.Element)(tm))
-		return tm
-	}
-	return sf.addTimer(tm)
+	sf.Add(tm)
+	return tm
 }
 
 // AddJobFunc 添加任务函数
@@ -133,41 +114,36 @@ func (sf *Base) AddJobFunc(f func(), interval time.Duration) *Timer {
 }
 
 // Add 启动或重始启动e的计时
-func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) *Base {
+func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) {
 	if tm == nil {
-		return sf
+		return
 	}
-
 	sf.rw.Lock()
-	defer sf.rw.Unlock()
-
-	return sf.start(tm, newTimeout...)
+	sf.start(tm, newTimeout...)
+	sf.rw.Unlock()
 }
 
 // Delete 删除条目
-func (sf *Base) Delete(tm *Timer) *Base {
+func (sf *Base) Delete(tm *Timer) {
 	if tm == nil {
-		return sf
+		return
 	}
 
 	sf.rw.Lock()
 	(*list.Element)(tm).RemoveSelf()
 	sf.rw.Unlock()
-
-	return sf
 }
 
 // Modify 修改条目的周期时间,重置计数且重新启动定时器
-func (sf *Base) Modify(tm *Timer, timeout time.Duration) *Base {
+func (sf *Base) Modify(tm *Timer, timeout time.Duration) {
 	if tm == nil {
-		return sf
+		return
 	}
 
 	sf.rw.Lock()
-	defer sf.rw.Unlock()
-
 	tm.getEntry().timeout = timeout
-	return sf.start(tm)
+	sf.start(tm)
+	sf.rw.Unlock()
 }
 
 func (sf *Base) runWork() {
@@ -229,7 +205,7 @@ func (sf *Base) nextTick(next time.Time) uint32 {
 func (sf *Base) addTimer(tm *Timer) *Timer {
 	var spokeIdx int
 
-	next := sf.nextTick(tm.getEntry().next)
+	next := sf.nextTick(tm.getEntry().nextTime)
 	if idx := next - sf.curTick; idx < tvRSize {
 		spokeIdx = int(next & tvRMask)
 	} else {
@@ -244,7 +220,7 @@ func (sf *Base) addTimer(tm *Timer) *Timer {
 	return tm
 }
 
-func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) *Base {
+func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) {
 	(*list.Element)(tm).RemoveSelf() // should remove from old list
 	e := tm.getEntry()
 
@@ -252,8 +228,10 @@ func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) *Base {
 	if len(newTimeout) > 0 {
 		timeout = newTimeout[0]
 	}
-	e.next = time.Now().Add(timeout)
-
-	sf.addTimer(tm)
-	return sf
+	e.nextTime = time.Now().Add(timeout)
+	if sf.nextTick(e.nextTime) == sf.curTick {
+		sf.doRunning.PushElementBack((*list.Element)(tm))
+	} else {
+		sf.addTimer(tm)
+	}
 }
