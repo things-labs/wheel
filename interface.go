@@ -1,4 +1,4 @@
-package timing
+package wheel
 
 // Job 定时任务接口
 type Job interface {

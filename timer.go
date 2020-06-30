@@ -1,4 +1,4 @@
-package timing
+package wheel
 
 import (
 	"time"
