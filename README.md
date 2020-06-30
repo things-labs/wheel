@@ -1,4 +1,7 @@
 # wheel timer
+
+golang time wheel library, which similar linux time wheel
+
 [![GoDoc](https://godoc.org/github.com/thinkgos/wheel?status.svg)](https://godoc.org/github.com/thinkgos/wheel)
 [![Build Status](https://travis-ci.org/thinkgos/wheel.svg?branch=master)](https://travis-ci.org/thinkgos/wheel)
 [![codecov](https://codecov.io/gh/thinkgos/wheel/branch/master/graph/badge.svg)](https://codecov.io/gh/thinkgos/wheel)
@@ -6,7 +9,54 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/thinkgos/wheel)](https://goreportcard.com/report/github.com/thinkgos/wheel)
 [![Licence](https://img.shields.io/github/license/thinkgos/wheel)](https://raw.githubusercontent.com/thinkgos/wheel/master/LICENSE)  
 
- - 五层时间轮: 主级加四个层级
- - 插入,删除,修改时间,扫描超时条目时间复杂度o(1)
- - 默认时间精度为1m.
- - 最大时间受限于时基精度,时间精度1ms最大可定时时间为49.71天,所以可定时最大时间为49.71天*${时基精度(ms)}
+### Feature
+
+ - Five-level time wheel: main level and four levels.
+ - insert,delete,modify,scan item time complexity O(1).
+ - the default time granularity is 1ms.
+ - The maximum time is limited by the accuracy of the time base. The time granularity is 1ms, 
+ and the maximum time can be 49.71 days. so the maximum time is 49.71 days * (granularity/1ms)
+ - **NOTE:do not use Time consuming task @ timer callback function,you can with `WithGoroutine`** 
+
+
+### Installation
+
+Use go get.
+```bash
+    go get github.com/thinkgos/wheel
+```
+
+Then import the modbus package into your own code.
+```bash
+    import modbus "github.com/thinkgos/wheel"
+```
+
+### Example
+
+---
+
+```go
+import (
+	"log"
+	"time"
+
+	"github.com/thinkgos/wheel"
+)
+
+func main() {
+	base := wheel.New()
+	base.Run()
+
+	tm := wheel.NewTimer(time.Second)
+	tm.WithJobFunc(func() {
+		log.Println("hello world")
+		base.Add(tm)
+	})
+	base.Add(tm)
+	time.Sleep(time.Second * 60)
+}
+```
+
+### References
+
+---
