@@ -5,8 +5,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/thinkgos/list"
 )
 
 const (
@@ -27,8 +25,8 @@ const (
 
 // Base 时间轮实现
 type Base struct {
-	spokes      []list.List // 轮的槽
-	doRunning   *list.List
+	spokes      []list // 轮的槽
+	doRunning   *list
 	curTick     uint32
 	startTime   time.Time
 	granularity time.Duration
@@ -50,15 +48,12 @@ func WithGranularity(gra time.Duration) Option {
 // New new a wheel
 func New(opts ...Option) *Base {
 	wl := &Base{
-		spokes:      make([]list.List, tvRSize+tvNSize*tvNNum),
-		doRunning:   list.New(),
+		spokes:      make([]list, tvRSize+tvNSize*tvNNum),
+		doRunning:   newList(),
 		startTime:   time.Now(),
 		granularity: DefaultGranularity,
 		stop:        make(chan struct{}),
 		curTick:     math.MaxUint32 - 30,
-	}
-	for i := 0; i < len(wl.spokes); i++ {
-		wl.spokes[i].Init()
 	}
 	for _, opt := range opts {
 		opt(wl)
@@ -109,8 +104,8 @@ func (sf *Base) AddJob(job Job, timeout time.Duration) *Timer {
 }
 
 // AddJobFunc 添加任务函数
-func (sf *Base) AddJobFunc(f func(), interval time.Duration) *Timer {
-	return sf.AddJob(JobFunc(f), interval)
+func (sf *Base) AddJobFunc(f func(), timeout time.Duration) *Timer {
+	return sf.AddJob(JobFunc(f), timeout)
 }
 
 // Add 启动或重始启动e的计时
@@ -130,7 +125,7 @@ func (sf *Base) Delete(tm *Timer) {
 	}
 
 	sf.rw.Lock()
-	(*list.Element)(tm).RemoveSelf()
+	tm.RemoveSelf()
 	sf.rw.Unlock()
 }
 
@@ -141,7 +136,7 @@ func (sf *Base) Modify(tm *Timer, timeout time.Duration) {
 	}
 
 	sf.rw.Lock()
-	tm.getEntry().timeout = timeout
+	tm.timeout = timeout
 	sf.start(tm)
 	sf.rw.Unlock()
 }
@@ -164,15 +159,15 @@ func (sf *Base) runWork() {
 			}
 
 			for sf.doRunning.Len() > 0 {
-				tm := (*Timer)(sf.doRunning.PopFront())
-				e := tm.getEntry()
-
+				tm := sf.doRunning.PopFront()
 				sf.rw.Unlock()
-				if e.useGoroutine {
-					go e.job.Run()
+
+				if tm.useGoroutine {
+					go tm.job.Run()
 				} else {
-					wrapJob(e.job)
+					wrapJob(tm.job)
 				}
+
 				sf.rw.Lock()
 			}
 			sf.rw.Unlock()
@@ -190,7 +185,7 @@ func (sf *Base) cascade() {
 		index := int((sf.curTick >> (uint32)(tvRBits+level*tvNBits)) & tvNMask)
 		spoke := sf.spokes[tvRSize+tvNSize*level+index]
 		for spoke.Len() > 0 {
-			sf.addTimer((*Timer)(spoke.PopFront()))
+			sf.addTimer(spoke.PopFront())
 		}
 		if level++; !(index == 0 && level < tvNNum) {
 			break
@@ -205,7 +200,7 @@ func (sf *Base) nextTick(next time.Time) uint32 {
 func (sf *Base) addTimer(tm *Timer) *Timer {
 	var spokeIdx int
 
-	next := sf.nextTick(tm.getEntry().nextTime)
+	next := sf.nextTick(tm.nextTime)
 	if idx := next - sf.curTick; idx < tvRSize {
 		spokeIdx = int(next & tvRMask)
 	} else {
@@ -216,21 +211,20 @@ func (sf *Base) addTimer(tm *Timer) *Timer {
 		}
 		spokeIdx = tvRSize + tvNSize*level + int((next>>(uint32)(tvRBits+tvNBits*level))&tvNMask)
 	}
-	sf.spokes[spokeIdx].PushElementBack((*list.Element)(tm))
+	sf.spokes[spokeIdx].PushElementBack(tm)
 	return tm
 }
 
 func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) {
-	(*list.Element)(tm).RemoveSelf() // should remove from old list
-	e := tm.getEntry()
+	tm.RemoveSelf() // should remove from old list
 
-	timeout := e.timeout
+	timeout := tm.timeout
 	if len(newTimeout) > 0 {
 		timeout = newTimeout[0]
 	}
-	e.nextTime = time.Now().Add(timeout)
-	if sf.nextTick(e.nextTime) == sf.curTick {
-		sf.doRunning.PushElementBack((*list.Element)(tm))
+	tm.nextTime = time.Now().Add(timeout)
+	if sf.nextTick(tm.nextTime) == sf.curTick {
+		sf.doRunning.PushElementBack(tm)
 	} else {
 		sf.addTimer(tm)
 	}

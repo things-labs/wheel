@@ -2,12 +2,20 @@ package wheel
 
 import (
 	"time"
-
-	"github.com/thinkgos/list"
 )
 
-// entry 条目
-type entry struct {
+// Timer which hold the timer instance
+type Timer struct {
+	// Next and previous pointers in the doubly-linked list of elements.
+	// To simplify the implementation, internally a list l is implemented
+	// as a ring, such that &l.root is both the next element of the last
+	// list element (l.Back()) and the previous element of the first list
+	// element (l.Front()).
+	next, prev *Timer
+
+	// The list to which this element belongs.
+	list *list
+
 	// nextTime 下一次运行时间  0: 表示未运行,或未启动
 	nextTime time.Time
 	// timeout 超时时间
@@ -18,16 +26,11 @@ type entry struct {
 	useGoroutine bool
 }
 
-// Timer which hold the timer instance
-type Timer list.Element
-
 // NewTimer new a timer with a empty job,
 func NewTimer(timeout time.Duration) *Timer {
 	return &Timer{
-		Value: &entry{
-			timeout: timeout,
-			job:     emptyJob{},
-		},
+		timeout: timeout,
+		job:     emptyJob{},
 	}
 }
 
@@ -41,20 +44,19 @@ func NewJobFunc(f func(), timeout time.Duration) *Timer {
 	return NewTimer(timeout).WithJobFunc(f)
 }
 
+// WithGoroutine with goroutine
 func (sf *Timer) WithGoroutine() *Timer {
-	sf.getEntry().useGoroutine = true
+	sf.useGoroutine = true
 	return sf
 }
 
+// WithJob with job.
 func (sf *Timer) WithJob(job Job) *Timer {
-	sf.getEntry().job = job
+	sf.job = job
 	return sf
 }
 
+// WithJobFunc with job function
 func (sf *Timer) WithJobFunc(f func()) *Timer {
 	return sf.WithJob(JobFunc(f))
-}
-
-func (sf *Timer) getEntry() *entry {
-	return sf.Value.(*entry)
 }
