@@ -13,8 +13,9 @@ const (
 	// DefaultGranularity 默认时基精度,意思是每xx时间一个tick
 	DefaultGranularity = time.Millisecond * 1
 )
+
+// 主级 + 4个层级共5级 占32位
 const (
-	// 主级 + 4个层级共5级 占32位
 	tvRBits = 8            // 主级占8位
 	tvNBits = 6            // 4个层级各占6位
 	tvNNum  = 4            // 层级个数
@@ -41,7 +42,7 @@ func listEntry(e *list.Element) *Entry {
 
 // Wheel 时间轮实现
 type Wheel struct {
-	spokes       []*list.List // 轮的槽
+	spokes       []list.List // 轮的槽
 	doRunning    *list.List
 	curTick      uint32
 	startTime    time.Time
@@ -58,32 +59,21 @@ type Timer *list.Element
 // New new a wheel
 func New(opts ...Option) *Wheel {
 	wl := &Wheel{
-		spokes:      make([]*list.List, tvRSize+tvNSize*tvNNum),
+		spokes:      make([]list.List, tvRSize+tvNSize*tvNNum),
 		doRunning:   list.New(),
 		startTime:   time.Now(),
 		granularity: DefaultGranularity,
 		stop:        make(chan struct{}),
+		curTick:     math.MaxUint32 - 30,
 	}
-
-	wl.curTick = math.MaxUint32 - 30
 	for i := 0; i < len(wl.spokes); i++ {
-		wl.spokes[i] = list.New()
+		wl.spokes[i].Init()
 	}
 
 	for _, opt := range opts {
 		opt(wl)
 	}
-
 	return wl
-}
-
-// UseGoroutine use goroutine or callback
-func (sf *Wheel) UseGoroutine(use bool) {
-	var val uint32
-	if use {
-		val = 1
-	}
-	atomic.StoreUint32(&sf.useGoroutine, val)
 }
 
 // Run 运行,不阻塞
@@ -91,7 +81,6 @@ func (sf *Wheel) Run() *Wheel {
 	if atomic.CompareAndSwapUint32(&sf.running, 0, 1) {
 		go sf.runWork()
 	}
-
 	return sf
 }
 
@@ -113,11 +102,12 @@ func (sf *Wheel) Len() int {
 	var length int
 
 	sf.rw.RLock()
+	defer sf.rw.RUnlock()
+
 	for i := 0; i < len(sf.spokes); i++ {
 		length += sf.spokes[i].Len()
 	}
 	length += sf.doRunning.Len()
-	sf.rw.RUnlock()
 	return length
 }
 
@@ -241,7 +231,7 @@ func (sf *Wheel) runWork() {
 				if index == 0 {
 					sf.cascade()
 				}
-				sf.doRunning.SpliceBackList(sf.spokes[index])
+				sf.doRunning.SpliceBackList(&sf.spokes[index])
 			}
 
 			for sf.doRunning.Len() > 0 {

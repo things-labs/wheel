@@ -17,6 +17,9 @@ func WithGranularity(gra time.Duration) Option {
 // WithGoroutine override useGoroutine 回调使用goroutine执行
 func WithGoroutine(use bool) Option {
 	return func(w *Wheel) {
-		w.UseGoroutine(use)
+		w.useGoroutine = 0
+		if use {
+			w.useGoroutine = 1
+		}
 	}
 }
