@@ -6,12 +6,10 @@ import (
 )
 
 var once sync.Once
-var base *Base
+var base = New()
 
 func lazyInit() {
-	once.Do(func() {
-		base = New().Run()
-	})
+	once.Do(func() { base.Run() })
 }
 
 // HasRunning base running status.
