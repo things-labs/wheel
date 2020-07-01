@@ -83,10 +83,9 @@ func (l *list) SpliceBackList(other *list) {
 	}
 }
 
-// RemoveSelf remove self from list ,if it not on any list do nothing
-func (e *Timer) RemoveSelf() *Timer {
+// removeSelf remove self from list ,if it not on any list do nothing
+func (e *Timer) removeSelf() {
 	if e.list != nil {
 		e.list.remove(e)
 	}
-	return e
 }

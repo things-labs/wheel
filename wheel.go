@@ -14,37 +14,39 @@ func lazyInit() {
 	})
 }
 
-// Len 条目个数
+// HasRunning base running status.
+func HasRunning() bool {
+	return base.HasRunning()
+}
+
+// Len the number timer of the base.
 func Len() int {
 	lazyInit()
 	return base.Len()
 }
 
-// AddJob 添加任务
+// AddJob add a job
 func AddJob(job Job, timeout time.Duration) *Timer {
 	lazyInit()
 	return base.AddJob(job, timeout)
 }
 
-// AddJobFunc 添加任务函数
-func AddJobFunc(f func(), timeout time.Duration) *Timer {
-	lazyInit()
-	return AddJob(JobFunc(f), timeout)
-}
+// AddJobFunc add a job function
+func AddJobFunc(f func(), timeout time.Duration) *Timer { return AddJob(JobFunc(f), timeout) }
 
-// Add 启动或重始启动e的计时
+// Add add timer to base. and start immediately.
 func Add(tm *Timer, newTimeout ...time.Duration) {
 	lazyInit()
 	base.Add(tm, newTimeout...)
 }
 
-// Delete 删除条目
+// Delete Delete timer from base.
 func Delete(tm *Timer) {
 	lazyInit()
 	base.Delete(tm)
 }
 
-// Modify 修改条目的周期时间,重置计数且重新启动定时器
+// Modify modify timer timeout,and restart immediately.
 func Modify(tm *Timer, timeout time.Duration) {
 	lazyInit()
 	base.Modify(tm, timeout)

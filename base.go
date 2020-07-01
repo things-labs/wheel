@@ -23,9 +23,9 @@ const (
 	tvNMask = tvNSize - 1  // 层级掩码
 )
 
-// Base 时间轮实现
+// Base time wheel base
 type Base struct {
-	spokes      []list // 轮的槽
+	spokes      []list
 	doRunning   *list
 	curTick     uint32
 	startTime   time.Time
@@ -35,17 +35,17 @@ type Base struct {
 	running     uint32
 }
 
-// Option 选项
+// Option option for base
 type Option func(w *Base)
 
-// WithGranularity override timeout 时间粒子
+// WithGranularity override base granularity
 func WithGranularity(gra time.Duration) Option {
 	return func(w *Base) {
 		w.granularity = gra
 	}
 }
 
-// New new a wheel
+// New new a base wheel
 func New(opts ...Option) *Base {
 	wl := &Base{
 		spokes:      make([]list, tvRSize+tvNSize*tvNNum),
@@ -61,7 +61,7 @@ func New(opts ...Option) *Base {
 	return wl
 }
 
-// Run 运行,不阻塞
+// Run the base in its own goroutine, or no-op if already started.
 func (sf *Base) Run() *Base {
 	if atomic.CompareAndSwapUint32(&sf.running, 0, 1) {
 		go sf.runWork()
@@ -69,7 +69,7 @@ func (sf *Base) Run() *Base {
 	return sf
 }
 
-// HasRunning 运行状态
+// HasRunning base running status.
 func (sf *Base) HasRunning() bool {
 	return atomic.LoadUint32(&sf.running) == 1
 }
@@ -82,7 +82,7 @@ func (sf *Base) Close() error {
 	return nil
 }
 
-// Len 条目个数
+// Len the number timer of the base.
 func (sf *Base) Len() int {
 	var length int
 
@@ -96,19 +96,19 @@ func (sf *Base) Len() int {
 	return length
 }
 
-// AddJob 添加任务
+// AddJob add a job
 func (sf *Base) AddJob(job Job, timeout time.Duration) *Timer {
 	tm := NewJob(job, timeout)
 	sf.Add(tm)
 	return tm
 }
 
-// AddJobFunc 添加任务函数
+// AddJobFunc add a job function
 func (sf *Base) AddJobFunc(f func(), timeout time.Duration) *Timer {
 	return sf.AddJob(JobFunc(f), timeout)
 }
 
-// Add 启动或重始启动e的计时
+// Add add timer to base.
 func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) {
 	if tm == nil {
 		return
@@ -118,26 +118,23 @@ func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) {
 	sf.rw.Unlock()
 }
 
-// Delete 删除条目
+// Delete Delete timer from base.
 func (sf *Base) Delete(tm *Timer) {
 	if tm == nil {
 		return
 	}
-
 	sf.rw.Lock()
-	tm.RemoveSelf()
+	tm.removeSelf()
 	sf.rw.Unlock()
 }
 
-// Modify 修改条目的周期时间,重置计数且重新启动定时器
+// Modify modify timer timeout,and restart immediately.
 func (sf *Base) Modify(tm *Timer, timeout time.Duration) {
 	if tm == nil {
 		return
 	}
-
 	sf.rw.Lock()
-	tm.timeout = timeout
-	sf.start(tm)
+	sf.start(tm, timeout)
 	sf.rw.Unlock()
 }
 
@@ -161,13 +158,13 @@ func (sf *Base) runWork() {
 			for sf.doRunning.Len() > 0 {
 				tm := sf.doRunning.PopFront()
 				sf.rw.Unlock()
-
-				if tm.useGoroutine {
-					go tm.job.Run()
-				} else {
-					wrapJob(tm.job)
+				if tm.job != nil {
+					if tm.useGoroutine {
+						go tm.job.Run()
+					} else {
+						wrapJob(tm.job)
+					}
 				}
-
 				sf.rw.Lock()
 			}
 			sf.rw.Unlock()
@@ -216,13 +213,12 @@ func (sf *Base) addTimer(tm *Timer) *Timer {
 }
 
 func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) {
-	tm.RemoveSelf() // should remove from old list
+	tm.removeSelf() // should remove from old list
 
-	timeout := tm.timeout
 	if len(newTimeout) > 0 {
-		timeout = newTimeout[0]
+		tm.timeout = newTimeout[0]
 	}
-	tm.nextTime = time.Now().Add(timeout)
+	tm.nextTime = time.Now().Add(tm.timeout)
 	if sf.nextTick(tm.nextTime) == sf.curTick {
 		sf.doRunning.PushElementBack(tm)
 	} else {

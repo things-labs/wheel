@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Timer which hold the timer instance
+// Timer consists of a schedule and the func to execute on that schedule.
 type Timer struct {
 	// Next and previous pointers in the doubly-linked list of elements.
 	// To simplify the implementation, internally a list l is implemented
@@ -16,13 +16,14 @@ type Timer struct {
 	// The list to which this element belongs.
 	list *list
 
-	// nextTime 下一次运行时间  0: 表示未运行,或未启动
+	// next time the job will run, or the zero time if Base has not been
+	// started or this entry is unsatisfiable
 	nextTime time.Time
-	// timeout 超时时间
+	// timeout time timeout
 	timeout time.Duration
-	// 任务
+	// job is the thing that want to run.
 	job Job
-	// useGoroutine
+	// use goroutine
 	useGoroutine bool
 }
 
@@ -34,12 +35,12 @@ func NewTimer(timeout time.Duration) *Timer {
 	}
 }
 
-// NewJob 新建一个条目,条目未启动定时
+// NewJob new timer with job.
 func NewJob(job Job, timeout time.Duration) *Timer {
 	return NewTimer(timeout).WithJob(job)
 }
 
-// NewJobFunc 新建一个条目,条目未启动定时
+// NewJobFunc new timer with job function.
 func NewJobFunc(f func(), timeout time.Duration) *Timer {
 	return NewTimer(timeout).WithJobFunc(f)
 }

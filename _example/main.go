@@ -8,8 +8,7 @@ import (
 )
 
 func main() {
-	base := wheel.New()
-	base.Run()
+	base := wheel.New().Run()
 
 	tm := wheel.NewTimer(time.Second)
 	tm.WithJobFunc(func() {

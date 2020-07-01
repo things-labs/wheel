@@ -7,6 +7,9 @@ import (
 )
 
 func TestWheel(t *testing.T) {
+	if got := HasRunning(); got {
+		t.Errorf("HasRunning() = %v, want %v", got, false)
+	}
 	if got := Len(); got != 0 {
 		t.Errorf("Len() = %v, want %v", got, 0)
 	}
@@ -16,7 +19,9 @@ func TestWheel(t *testing.T) {
 	Delete(e)
 	Modify(e, time.Millisecond*200)
 	time.Sleep(time.Second)
-
+	if got := HasRunning(); !got {
+		t.Errorf("HasRunning() = %v, want %v", got, true)
+	}
 	e1 := NewTimer(time.Millisecond * 100).WithGoroutine()
 	Add(e1, time.Millisecond*150)
 
