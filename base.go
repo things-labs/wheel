@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// DefaultGranularity 默认时基精度1ms,意思是每xx时间一个tick
+	// DefaultGranularity 1ms every 1ms a tick
 	DefaultGranularity = time.Millisecond * 1
 )
 

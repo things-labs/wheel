@@ -16,6 +16,7 @@ golang time wheel library, which similar linux time wheel
  - the default time granularity is 1ms.
  - The maximum time is limited by the accuracy of the time base. The time granularity is 1ms, 
  and the maximum time can be 49.71 days. so the maximum time is 49.71 days * (granularity/1ms)
+ - There is the internal wheel timer base with granularity 1ms,it lazies init internal until you first used.
  - **NOTE:do not use Time consuming task @ timer callback function,you can with `WithGoroutine`** 
 
 
