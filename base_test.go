@@ -23,23 +23,23 @@ func TestDefaultBase(t *testing.T) {
 		t.Errorf("HasRunning() = %v, want %v", got, true)
 	}
 
-	e := NewJobFunc(func() {}, time.Millisecond*100)
-	wl.Add(e)
+	e := NewJobFunc(func() {})
+	wl.Add(e, time.Millisecond*100)
 	wl.Delete(e)
 	wl.Modify(e, time.Millisecond*200)
 	time.Sleep(time.Second)
 
-	e1 := NewTimer(time.Millisecond * 100).WithGoroutine()
+	e1 := NewTimer().WithGoroutine()
 	wl.Add(e1, time.Millisecond*150)
 
-	e2 := NewTimer(time.Millisecond * 100).WithGoroutine()
+	e2 := NewTimer().WithGoroutine()
 	wl.Add(e2, 0)
 	time.Sleep(time.Second)
 
 	// improve couver
 	wl.Modify(nil, time.Second)
 	wl.Delete(nil)
-	wl.Add(nil)
+	wl.Add(nil, time.Second)
 }
 
 func ExampleBase_Run() {

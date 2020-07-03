@@ -14,25 +14,25 @@ func TestWheel(t *testing.T) {
 		t.Errorf("Len() = %v, want %v", got, 0)
 	}
 
-	e := NewJobFunc(func() {}, time.Millisecond*100)
-	Add(e)
+	e := NewJobFunc(func() {})
+	Add(e, time.Millisecond*100)
 	Delete(e)
 	Modify(e, time.Millisecond*200)
 	time.Sleep(time.Second)
 	if got := HasRunning(); !got {
 		t.Errorf("HasRunning() = %v, want %v", got, true)
 	}
-	e1 := NewTimer(time.Millisecond * 100).WithGoroutine()
+	e1 := NewTimer().WithGoroutine()
 	Add(e1, time.Millisecond*150)
 
-	e2 := NewTimer(time.Millisecond * 100).WithGoroutine()
-	Add(e2, 0)
+	e2 := NewTimer().WithGoroutine()
+	Add(e2, time.Millisecond*100)
 	time.Sleep(time.Second)
 
 	// improve couver
 	Modify(nil, time.Second)
 	Delete(nil)
-	Add(nil)
+	Add(nil, time.Second)
 }
 
 func ExampleBase_Len() {

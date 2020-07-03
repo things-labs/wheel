@@ -98,8 +98,8 @@ func (sf *Base) Len() int {
 
 // AddJob add a job
 func (sf *Base) AddJob(job Job, timeout time.Duration) *Timer {
-	tm := NewJob(job, timeout)
-	sf.Add(tm)
+	tm := NewJob(job)
+	sf.Add(tm, timeout)
 	return tm
 }
 
@@ -109,12 +109,12 @@ func (sf *Base) AddJobFunc(f func(), timeout time.Duration) *Timer {
 }
 
 // Add add timer to base.
-func (sf *Base) Add(tm *Timer, newTimeout ...time.Duration) {
+func (sf *Base) Add(tm *Timer, timeout time.Duration) {
 	if tm == nil {
 		return
 	}
 	sf.rw.Lock()
-	sf.start(tm, newTimeout...)
+	sf.start(tm, timeout)
 	sf.rw.Unlock()
 }
 
@@ -212,13 +212,10 @@ func (sf *Base) addTimer(tm *Timer) *Timer {
 	return tm
 }
 
-func (sf *Base) start(tm *Timer, newTimeout ...time.Duration) {
+func (sf *Base) start(tm *Timer, timeout time.Duration) {
 	tm.removeSelf() // should remove from old list
 
-	if len(newTimeout) > 0 {
-		tm.timeout = newTimeout[0]
-	}
-	tm.nextTime = time.Now().Add(tm.timeout)
+	tm.nextTime = time.Now().Add(timeout)
 	if sf.nextTick(tm.nextTime) == sf.curTick {
 		sf.doRunning.PushElementBack(tm)
 	} else {
