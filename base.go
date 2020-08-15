@@ -12,6 +12,10 @@ const (
 	DefaultGranularity = time.Millisecond * 1
 )
 
+type GoPool interface {
+	Go(func())
+}
+
 // 主级 + 4个层级共5级 占32位
 const (
 	tvRBits = 8            // 主级占8位

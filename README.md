@@ -27,9 +27,9 @@ Use go get.
     go get github.com/thinkgos/wheel
 ```
 
-Then import the modbus package into your own code.
+Then import the wheel package into your own code.
 ```bash
-    import modbus "github.com/thinkgos/wheel"
+    import "github.com/thinkgos/wheel"
 ```
 
 ### Example
@@ -45,15 +45,12 @@ import (
 )
 
 func main() {
-	base := wheel.New()
-	base.Run()
-
 	tm := wheel.NewTimer()
 	tm.WithJobFunc(func() {
 		log.Println("hello world")
-		base.Add(tm, time.Second)
+		wheel.Add(tm, time.Second)
 	})
-	base.Add(tm, time.Second)
+	wheel.Add(tm, time.Second)
 	time.Sleep(time.Second * 60)
 }
 ```

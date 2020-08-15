@@ -8,9 +8,7 @@ import (
 var once sync.Once
 var base = New()
 
-func lazyInit() {
-	once.Do(func() { base.Run() })
-}
+func lazyInit() { once.Do(func() { base.Run() }) }
 
 // HasRunning base running status.
 func HasRunning() bool {
