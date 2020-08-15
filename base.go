@@ -12,10 +12,6 @@ const (
 	DefaultGranularity = time.Millisecond * 1
 )
 
-type GoPool interface {
-	Go(func())
-}
-
 // 主级 + 4个层级共5级 占32位
 const (
 	tvRBits = 8            // 主级占8位
@@ -29,14 +25,16 @@ const (
 
 // Base time wheel base
 type Base struct {
-	spokes      []list
-	doRunning   *list
-	curTick     uint32
 	startTime   time.Time
 	granularity time.Duration
-	rw          sync.RWMutex
+	goPool      GoPool
 	stop        chan struct{}
 	running     uint32
+
+	rw        sync.RWMutex
+	curTick   uint32
+	spokes    []list
+	doRunning *list
 }
 
 // Option option for base
@@ -46,6 +44,13 @@ type Option func(w *Base)
 func WithGranularity(gra time.Duration) Option {
 	return func(w *Base) {
 		w.granularity = gra
+	}
+}
+
+// WithGoPool set goroutine pool
+func WithGoPool(pool GoPool) Option {
+	return func(w *Base) {
+		w.goPool = pool
 	}
 }
 
@@ -164,7 +169,11 @@ func (sf *Base) runWork() {
 				sf.rw.Unlock()
 				if tm.job != nil {
 					if tm.useGoroutine {
-						go tm.job.Run()
+						if sf.goPool != nil {
+							sf.goPool.Go(tm.job.Run)
+						} else {
+							go tm.job.Run()
+						}
 					} else {
 						wrapJob(tm.job)
 					}

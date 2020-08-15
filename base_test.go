@@ -13,7 +13,7 @@ func (sf testJob) Run() {
 }
 
 func TestDefaultBase(t *testing.T) {
-	wl := New(WithGranularity(DefaultGranularity)).Run()
+	wl := New(WithGranularity(DefaultGranularity), WithGoPool(nil)).Run()
 
 	defer wl.Close()
 	if got := wl.Len(); got != 0 {

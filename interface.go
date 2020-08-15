@@ -1,5 +1,10 @@
 package wheel
 
+// GoPool goroutine pool
+type GoPool interface {
+	Go(func())
+}
+
 // Job 定时任务接口
 type Job interface {
 	Run()
