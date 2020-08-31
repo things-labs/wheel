@@ -192,12 +192,13 @@ func (sf *Base) runWork() {
 // 层叠计算每一层
 func (sf *Base) cascade() {
 	for level := 0; ; {
-		index := int((sf.curTick >> (uint32)(tvRBits+level*tvNBits)) & tvNMask)
+		index := int((sf.curTick >> (tvRBits + level*tvNBits)) & tvNMask)
 		spoke := sf.spokes[tvRSize+tvNSize*level+index]
 		for spoke.Len() > 0 {
 			sf.addTimer(spoke.PopFront())
 		}
-		if level++; !(index == 0 && level < tvNNum) {
+		level++
+		if !(index == 0 && level < tvNNum) {
 			break
 		}
 	}
@@ -207,7 +208,7 @@ func (sf *Base) nextTick(next time.Time) uint32 {
 	return uint32((next.Sub(sf.startTime) + sf.granularity - 1) / sf.granularity)
 }
 
-func (sf *Base) addTimer(tm *Timer) *Timer {
+func (sf *Base) addTimer(tm *Timer) {
 	var spokeIdx int
 
 	next := sf.nextTick(tm.nextTime)
@@ -219,10 +220,9 @@ func (sf *Base) addTimer(tm *Timer) *Timer {
 		for idx >>= tvRBits; idx >= tvNSize && level < (tvNNum-1); level++ {
 			idx >>= tvNBits
 		}
-		spokeIdx = tvRSize + tvNSize*level + int((next>>(uint32)(tvRBits+tvNBits*level))&tvNMask)
+		spokeIdx = tvRSize + tvNSize*level + int((next>>(tvRBits+tvNBits*level))&tvNMask)
 	}
 	sf.spokes[spokeIdx].PushElementBack(tm)
-	return tm
 }
 
 func (sf *Base) start(tm *Timer, timeout time.Duration) {

@@ -43,18 +43,18 @@ func NewJobFunc(f func()) *Timer {
 }
 
 // WithGoroutine with goroutine
-func (sf *Timer) WithGoroutine() *Timer {
-	sf.useGoroutine = true
-	return sf
+func (t *Timer) WithGoroutine() *Timer {
+	t.useGoroutine = true
+	return t
 }
 
 // WithJob with job.
-func (sf *Timer) WithJob(job Job) *Timer {
-	sf.job = job
-	return sf
+func (t *Timer) WithJob(job Job) *Timer {
+	t.job = job
+	return t
 }
 
 // WithJobFunc with job function
-func (sf *Timer) WithJobFunc(f func()) *Timer {
-	return sf.WithJob(JobFunc(f))
+func (t *Timer) WithJobFunc(f func()) *Timer {
+	return t.WithJob(JobFunc(f))
 }
