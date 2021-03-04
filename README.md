@@ -38,6 +38,7 @@ Then import the wheel package into your own code.
 
 ---
 
+[embedmd]# (_example/main.go go)
 ```go
 import (
 	"log"
