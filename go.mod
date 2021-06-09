@@ -1,3 +1,3 @@
-module github.com/thinkgos/wheel
+module github.com/things-go/timewheel
 
 go 1.14

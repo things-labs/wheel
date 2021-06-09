@@ -1,4 +1,4 @@
-package wheel
+package timewheel
 
 // GoPool goroutine pool
 type GoPool interface {

@@ -4,15 +4,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/thinkgos/wheel"
+	timewheel "github.com/things-go/timewheel"
 )
 
 func main() {
-	tm := wheel.NewTimer()
+	tm := timewheel.NewTimer()
 	tm.WithJobFunc(func() {
 		log.Println("hello world")
-		wheel.Add(tm, time.Second)
+		timewheel.Add(tm, time.Second)
 	})
-	wheel.Add(tm, time.Second)
+	timewheel.Add(tm, time.Second)
 	time.Sleep(time.Second * 60)
 }

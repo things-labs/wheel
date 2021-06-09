@@ -1,4 +1,4 @@
-package wheel
+package timewheel
 
 import (
 	"sync"
@@ -47,3 +47,5 @@ func Modify(tm *Timer, timeout time.Duration) {
 	lazyInit()
 	base.Modify(tm, timeout)
 }
+
+func AfterFunc(d time.Duration, f func()) *Timer { return AddJobFunc(f, d) }

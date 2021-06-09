@@ -1,4 +1,4 @@
-package wheel
+package timewheel
 
 type list struct {
 	root Timer

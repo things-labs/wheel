@@ -1,4 +1,4 @@
-package wheel
+package timewheel
 
 import (
 	"fmt"
@@ -29,19 +29,19 @@ func TestWheel(t *testing.T) {
 	Add(e2, time.Millisecond*100)
 	time.Sleep(time.Second)
 
-	// improve couver
+	// improve conver
 	Modify(nil, time.Second)
 	Delete(nil)
 	Add(nil, time.Second)
 }
 
 func ExampleBase_Len() {
-	AddJobFunc(func() {
+	AfterFunc(time.Millisecond*100, func() {
 		fmt.Println("1")
-	}, time.Millisecond*100)
-	AddJobFunc(func() {
+	})
+	AfterFunc(time.Millisecond*200, func() {
 		fmt.Println("2")
-	}, time.Millisecond*200)
+	})
 	AddJob(&testJob{}, time.Millisecond*300)
 	time.Sleep(time.Second * 2)
 	// Output:
