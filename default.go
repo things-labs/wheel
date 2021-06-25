@@ -48,4 +48,5 @@ func Modify(tm *Timer, timeout time.Duration) {
 	base.Modify(tm, timeout)
 }
 
+// AfterFunc like time.AfterFunc
 func AfterFunc(d time.Duration, f func()) *Timer { return AddJobFunc(f, d) }

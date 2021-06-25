@@ -2,14 +2,14 @@
 
 golang time wheel library, which similar linux time wheel
 
-[![GoDoc](https://godoc.org/github.com/thinkgos/wheel?status.svg)](https://godoc.org/github.com/thinkgos/wheel)
-[![Go.Dev reference](https://img.shields.io/badge/go.dev-reference-blue?logo=go&logoColor=white)](https://pkg.go.dev/github.com/thinkgos/wheel?tab=doc)
-[![Build Status](https://travis-ci.com/thinkgos/wheel.svg)](https://travis-ci.com/thinkgos/wheel)
-[![codecov](https://codecov.io/gh/thinkgos/wheel/branch/master/graph/badge.svg)](https://codecov.io/gh/thinkgos/wheel)
-![Action Status](https://github.com/thinkgos/wheel/workflows/Go/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/thinkgos/wheel)](https://goreportcard.com/report/github.com/thinkgos/wheel)
-[![Licence](https://img.shields.io/github/license/thinkgos/wheel)](https://raw.githubusercontent.com/thinkgos/wheel/master/LICENSE)
-[![Tag](https://img.shields.io/github/v/tag/thinkgos/wheel)](https://github.com/thinkgos/wheel/tags)
+[![GoDoc](https://godoc.org/github.com/things-labs/wheel?status.svg)](https://godoc.org/github.com/things-labs/wheel)
+[![Go.Dev reference](https://img.shields.io/badge/go.dev-reference-blue?logo=go&logoColor=white)](https://pkg.go.dev/github.com/things-labs/wheel?tab=doc)
+[![Build Status](https://travis-ci.com/things-labs/wheel.svg)](https://travis-ci.com/things-labs/wheel)
+[![codecov](https://codecov.io/gh/things-labs/wheel/branch/master/graph/badge.svg)](https://codecov.io/gh/things-labs/wheel)
+![Action Status](https://github.com/things-labs/wheel/workflows/Go/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/things-labs/wheel)](https://goreportcard.com/report/github.com/things-labs/wheel)
+[![Licence](https://img.shields.io/github/license/things-labs/wheel)](https://raw.githubusercontent.com/things-labs/wheel/master/LICENSE)
+[![Tag](https://img.shields.io/github/v/tag/things-labs/wheel)](https://github.com/things-labs/wheel/tags)
 
 ### Feature
 
@@ -26,12 +26,12 @@ golang time wheel library, which similar linux time wheel
 
 Use go get.
 ```bash
-    go get github.com/thinkgos/wheel
+    go get github.com/things-labs/wheel
 ```
 
 Then import the wheel package into your own code.
 ```bash
-    import "github.com/thinkgos/wheel"
+    import "github.com/things-labs/wheel"
 ```
 
 ### Example
@@ -44,7 +44,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/thinkgos/wheel"
+	"github.com/things-labs/wheel"
 )
 
 func main() {
