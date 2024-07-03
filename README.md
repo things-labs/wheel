@@ -1,6 +1,6 @@
 # wheel timer
 
-**NOTE**: (Archived) Use https://github.com/thinkgos/timer instead, which implemet Kafka's Hierarchical Timing Wheels, unlimited wheel, unlimited maximun time.
+**NOTE**: (Archived) Use [timer](https://github.com/thinkgos/timer) instead, which implemet Kafka's Hierarchical Timing Wheels, unlimited wheel, unlimited maximun time.
 
 golang time wheel library, which similar linux time wheel
 
